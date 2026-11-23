@@ -1,3 +1,4 @@
+cat << 'EOF' > app/src/main/java/com/rajput/info/MainActivity.kt
 package com.rajput.info
 
 import android.content.Context
@@ -8,6 +9,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +39,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import kotlin.random.Random
 
 val DarkBg = Color(0xFF050505)
 val SurfaceBg = Color(0xFF111111)
@@ -47,6 +52,7 @@ interface ApiService {
     @GET("id") suspend fun getTelegramId(@Query("key") key: String = "Rajput", @Query("q") username: String): Response<JsonObject>
     @GET("https://deeposint.felixrdx.xyz/api/developer/Cyb3rB4nn3r/") suspend fun phoneLookup(@Query("key") key: String = "9c8c8ebe8355255bb2c4cd2e002476cf", @Query("query") phone: String): Response<JsonObject>
 }
+
 object RetrofitClient {
     val api: ApiService by lazy { Retrofit.Builder().baseUrl("https://osint.invalidayushh.workers.dev/").addConverterFactory(GsonConverterFactory.create()).build().create(ApiService::class.java) }
 }
@@ -89,6 +95,7 @@ class AppViewModel : ViewModel() {
             } catch (e: Exception) { _tgState.value = UiState.Error(e.message ?: "Error") }
         }
     }
+
     fun searchPhone(phone: String) {
         if (phone.isBlank()) return
         _phoneState.value = UiState.Loading
@@ -118,12 +125,24 @@ class MainActivity : ComponentActivity() {
         try { mediaPlayer = MediaPlayer.create(this, R.raw.song); mediaPlayer?.isLooping = true; mediaPlayer?.start() } catch (e: Exception) { }
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = GoldAccent, background = DarkBg, surface = SurfaceBg)) {
-                val isMaintenance = false // Ise true karein toh app band ho jayega
-                if (isMaintenance) MaintenanceScreen() else AppContent()
+                val isMaintenance = false 
+                if (isMaintenance) MaintenanceScreen() else Box(modifier = Modifier.fillMaxSize().background(DarkBg)) { HackerBackground(); AppContent() }
             }
         }
     }
     override fun onDestroy() { super.onDestroy(); mediaPlayer?.stop(); mediaPlayer?.release() }
+}
+
+@Composable
+fun HackerBackground() {
+    val textPaint = android.graphics.Paint().apply { color = android.graphics.Color.GREEN; textSize = 35f; alpha = 50; fontFamily = FontFamily.Monospace }
+    Canvas(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+        for (i in 0..25) {
+            val x = Random.nextInt(0, size.width.toInt()).toFloat()
+            val y = Random.nextInt(0, size.height.toInt()).toFloat()
+            drawContext.canvas.nativeCanvas.drawText("01ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%^".random().toString(), x, y, textPaint)
+        }
+    }
 }
 
 @Composable
@@ -186,7 +205,13 @@ fun MainScreen(session: SessionManager) {
         bottomBar = { NavigationBar(containerColor = SurfaceBg) { NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.Send, null) }, label = { Text("Telegram") }); NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Phone, null) }, label = { Text("Phone") }) } }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize().background(DarkBg)) {
-            if (showAdmin) AdminPanel(session, onClose = { showAdmin = false }) else if (tab == 0) TelegramTab(session) { credits = session.getCredits(session.getCurrentUser()) } else PhoneTab(session) { credits = session.getCredits(session.getCurrentUser()) }
+            if (showAdmin) {
+                AdminPanel(session, onClose = { showAdmin = false })
+            } else if (tab == 0) {
+                TelegramTab(session = session, onCreditUsed = { credits = session.getCredits(session.getCurrentUser()) })
+            } else {
+                PhoneTab(session = session, onCreditUsed = { credits = session.getCredits(session.getCurrentUser()) })
+            }
         }
     }
 }
@@ -275,3 +300,4 @@ fun AdminPanel(session: SessionManager, onClose: () -> Unit) {
             confirmButton = { Button(onClick = { val amt = c.toIntOrNull() ?: 0; if (u.isNotBlank() && amt > 0) { session.addCredits(u, amt); Toast.makeText(context, "Credits Added", Toast.LENGTH_SHORT).show(); showAddCredits = false } }) { Text("Add") } })
     }
 }
+EOF
